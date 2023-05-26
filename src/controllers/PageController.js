@@ -1,7 +1,12 @@
 const index = (request, response) => {
-    response.send('BONJOUUUUUUUUUUR')
+    response.sendStatus(200)
+}
+
+const about = (request, response) => {
+
 }
 
 export default {
-    index
+    index,
+    about
 }
