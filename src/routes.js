@@ -1,23 +1,58 @@
 export default [
     [
-        'GET',
-        "/",
+        `POST`,
+        `/auth/signup`,
         async (request, response) =>
-            await import(`./controllers/PageController.js`)
-                .then(module => module.default.index(request, response))
+            await import (`./controllers/AuthController.js`)
+                .then(module => module.default.signup(request, response))
     ],
     [
-        'GET', 
-        "/about",
+        `POST`,
+        `/auth/login`,
         async (request, response) =>
-            await import(`./controllers/PageController.js`)
-                .then(module => module.default.about(request, response))
+            await import (`./controllers/AuthController.js`)
+                .then(module => module.default.login(request, response))
+    ],
+    [
+        'GET',
+        "/books/",
+        async (request, response) =>
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.list(request, response))
+    ],
+    [
+        'GET',
+        "/books/bestrating",
+        async (request, response) =>
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.list(request, response))
+    ],
+    [
+        'GET',
+        "/books/:id",
+        async (request, response) =>
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.get(request, response))
     ],
     [
         'POST',
-        "/users",
+        "/books",
         async (request, response) =>
-            await import(`./controllers/UserController.js`)
-                .then(module => module.default.users(request, response))
-    ]
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.store(request, response))
+    ],
+    [
+        'PATCH',
+        "/books/:id",
+        async (request, response) =>
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.update(request, response))
+    ],
+    [
+        'DELETE',
+        "/books/:id",
+        async (request, response) =>
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.destroy(request, response))
+    ],
 ]

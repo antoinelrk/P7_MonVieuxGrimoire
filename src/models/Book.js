@@ -2,7 +2,7 @@ let Model
 
 const _init = (db) => {
     Model = db.model(`${import.meta.url.split('/').pop().split('.').shift()}`, {
-        name: String,
+        title: String
     })
 }
 
