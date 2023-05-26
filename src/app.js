@@ -2,24 +2,42 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import Database from './core/Database.js'
+import Router from './core/Router.js'
+
 dotenv.config()
-const PORT = process.env.APP_PORT
 const env = process.env
-const app = express()
 
-app.use(cors())
+const webServer = express()
+webServer.use(cors())
+webServer.use(express.json())
 
-const client = new Database({
+const db = Database.connect({
     username: env.DB_USERNAME,
     password: env.DB_PASSWORD,
-    host: env.DB_HOST,
-    dbName: env.DB_NAME
+    host: env.DB_HOST
 })
 
-app.get('/', async (request, response) => {
-    response.send(`MonVieuxGrimoire API`)
+Router.initialize(webServer, env.APP_PORT)
+
+/**
+ * ! Zone de test
+ */
+const User = db.model('User', {
+    name: String,
+    age: Number
 })
 
-app.listen(PORT, () => {
-    console.log(`API Listen on port ${PORT}`)
+const user = new User({
+    name: 'Antoine',
+    age: 29
 })
+
+const getDb = () => mongoose
+const getRouter = () => Router
+const getWebserver = () => webServer
+
+export default {
+    getDb,
+    getRouter,
+    getWebserver
+}
