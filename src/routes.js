@@ -11,7 +11,7 @@ export default [
         "/about",
         async (request, response) =>
             await import(`./controllers/PageController.js`)
-                .then(module => module.default.index(request, response))
+                .then(module => module.default.about(request, response))
     ],
     [
         'POST',

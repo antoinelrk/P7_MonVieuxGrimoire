@@ -3,6 +3,7 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import Database from './core/Database.js'
 import Router from './core/Router.js'
+import Model from './core/Model.js'
 
 dotenv.config()
 const env = process.env
@@ -14,23 +15,12 @@ webServer.use(express.json())
 const db = Database.connect({
     username: env.DB_USERNAME,
     password: env.DB_PASSWORD,
-    host: env.DB_HOST
+    host: env.DB_HOST,
+    dbName: env.DB_NAME
 })
 
 Router.initialize(webServer, env.APP_PORT)
-
-/**
- * ! Zone de test
- */
-const User = db.model('User', {
-    name: String,
-    age: Number
-})
-
-const user = new User({
-    name: 'Antoine',
-    age: 29
-})
+Model.initialize(db)
 
 const getDb = () => mongoose
 const getRouter = () => Router

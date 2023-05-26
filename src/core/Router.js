@@ -1,4 +1,3 @@
-import cors from 'cors'
 import routes from "../routes.js"
 
 const initialize = async (webServer, port) => {
