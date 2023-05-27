@@ -1,6 +1,6 @@
 const _init = (request, response, next) => {
     console.log(`Middleware d'auth`);
-    next()
+    next(request, response)
 }
 
 export default {

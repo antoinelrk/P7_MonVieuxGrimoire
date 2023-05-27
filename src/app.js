@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import Database from './core/Database.js'
 import Router from './core/Router.js'
 import Model from './core/Model.js'
+import Middleware from './core/Middleware.js'
 
 dotenv.config()
 const env = process.env
@@ -19,15 +20,18 @@ const db = Database.connect({
     dbName: env.DB_NAME
 })
 
+// Middleware.initialize(webServer)
 Router.initialize(webServer, env.APP_PORT)
 Model.initialize(db)
 
 const getDb = () => mongoose
 const getRouter = () => Router
 const getWebserver = () => webServer
+const getEnv = () => env
 
 export default {
     getDb,
     getRouter,
-    getWebserver
+    getWebserver,
+    getEnv
 }
