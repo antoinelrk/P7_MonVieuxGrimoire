@@ -20,7 +20,14 @@ const generateJwt = (user, options = null) => {
         }
     }
 }
-const verifyJwt = () => {}
+const verifyJwt = (token) => {
+    try {
+        const decoded = jwt.verify(token, App.getEnv().JWT_SECRET)
+        return decoded
+    } catch (error) {
+        return null
+    }
+}
 
 export default {
     generateJwt,

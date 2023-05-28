@@ -19,10 +19,11 @@ const list = (request, response) => {
 }
 
 const store = (request, response) => {
- response.send({
-    message: `message`,
-    status: 200
- })
+   console.log(request.user)
+   response.send({
+      message: `message`,
+      status: 200
+   })
 }
 
 const update = (request, response) => {
