@@ -1,21 +1,45 @@
 import routes from "../routes.js"
+import Authenticate from "../middlewares/Authenticate.js"
+import express from 'express'
+const router = express.Router()
 
-const initialize = async (webServer, port) => {
+const initialize = async (webServer, port, prefix, middlewaresList) => {
     routes.forEach(route => {
         switch(route[0]) {
             case 'GET':
-                webServer.get(`/api${route[1]}`, async(request, response) => await route[2](request, response))
+                router.get(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
                 break;
             case 'POST':
-                webServer.post(`/api${route[1]}`, async(request, response) => await route[2](request, response))
+                router.post(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                break;
+            case 'PATCH': 
+                router.patch(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                break;
+            case 'PUT': 
+                router.put(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                break;
+            case 'DELETE': 
+                router.delete(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
                 break;
         }
     })
+
+    webServer.use('/', router)
 
     webServer.listen(port, () => {
         console.log(`${routes.length} routes loaded`)
         console.log(`API Listen on port ${port}`)
     })
+}
+
+const invokeMiddlewares = (middlewaresList, keysList) => {
+    return middlewaresList.filter((middleware) => {
+        return keysList.some((key) => {
+            if (key === middleware.key) {
+                return middleware
+            }
+        })
+    }).map(activeMiddleware => activeMiddleware.on)
 }
 
 const getRoutes = () => routes

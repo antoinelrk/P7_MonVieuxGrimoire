@@ -28,6 +28,7 @@ const login = async (request, response) => {
             }, {
                 withRefresh: true
             })
+            response.setHeader("Bearer", `${jwtData.token}`)
             statusCode = 200
             data = {
                 token: `${jwtData.token}`

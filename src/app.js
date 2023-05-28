@@ -20,18 +20,21 @@ const db = Database.connect({
     dbName: env.DB_NAME
 })
 
-// Middleware.initialize(webServer)
-Router.initialize(webServer, env.APP_PORT)
+const arrayOfMiddlewares = await Middleware.initialize().then((elements) => {
+    Router.initialize(webServer, env.APP_PORT, env.API_PREFIX, elements)
+})
 Model.initialize(db)
 
 const getDb = () => mongoose
 const getRouter = () => Router
 const getWebserver = () => webServer
 const getEnv = () => env
+const getMiddleware = () => arrayOfMiddlewares
 
 export default {
     getDb,
     getRouter,
     getWebserver,
-    getEnv
+    getEnv,
+    getMiddleware
 }

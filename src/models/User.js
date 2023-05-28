@@ -22,6 +22,9 @@ const _init = (db) => {
 
     Model = db.model(`${import.meta.url.split('/').pop().split('.').shift()}`, schema)
     Model.createCollection()
+    /**
+     * TODO: Essayer avec le plugin `mongoose-unique-validator`
+     */
     Model.collection.createIndex({
         "email": 1
     }, {
