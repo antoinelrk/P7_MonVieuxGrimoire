@@ -10,7 +10,7 @@ export default [
     [
         `POST`,
         `/auth/login`,
-        [],
+        ['guest'],
         async (request, response) =>
             await import (`./controllers/AuthController.js`)
                 .then(module => module.default.login(request, response))
@@ -42,7 +42,7 @@ export default [
     [
         'POST',
         "/books",
-        ['authenticate'],
+        ['auth'],
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.store(request, response))
@@ -50,7 +50,7 @@ export default [
     [
         'PATCH',
         "/books/:id",
-        ['authenticate'],
+        ['auth'],
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.update(request, response))
@@ -58,7 +58,7 @@ export default [
     [
         'DELETE',
         "/books/:id",
-        ['authenticate'],
+        ['auth'],
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.destroy(request, response))

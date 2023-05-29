@@ -1,5 +1,5 @@
 import routes from "../routes.js"
-import Authenticate from "../middlewares/Authenticate.js"
+import Authenticate from "../middlewares/Auth.js"
 import express from 'express'
 const router = express.Router()
 
