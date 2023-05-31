@@ -24,6 +24,7 @@ const login = async (request, response) => {
     if (user !== null) {
         if (await Hash.verify(user.password, request.body.password)) {
             const jwtData = Jwt.generateJwt({
+                userId: user._id.toString(),
                 email: user.email
             }, {
                 withRefresh: true
@@ -31,6 +32,7 @@ const login = async (request, response) => {
             response.setHeader("Bearer", `${jwtData.token}`)
             statusCode = 200
             data = {
+                userId: user._id.toString(),
                 token: `${jwtData.token}`
             }
             // response.cookie(`token`, jwtData.token, { maxAge: App.getEnv().JWT_TTL })
