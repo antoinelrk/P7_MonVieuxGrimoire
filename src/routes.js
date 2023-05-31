@@ -42,7 +42,7 @@ export default [
     [
         'POST',
         "/books",
-        ['auth'],
+        ['auth', 'filemanager'],
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.store(request, response))
@@ -62,5 +62,13 @@ export default [
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.destroy(request, response))
+    ],
+    [
+        'POST',
+        "/books/:id/rating",
+        ['auth'],
+        async (request, response) => 
+            await import (`./controllers/BookController.js`)
+                .then(module => module.default.rating(request, response))
     ]
 ]
