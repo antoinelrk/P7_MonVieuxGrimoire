@@ -13,6 +13,8 @@ const webServer = express()
 webServer.use(cors())
 webServer.use(express.json())
 
+webServer.use('/uploads', express.static(`${process.cwd()}/uploads`));
+
 const db = Database.connect({
     username: env.DB_USERNAME,
     password: env.DB_PASSWORD,
