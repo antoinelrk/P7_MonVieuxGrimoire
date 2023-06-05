@@ -16,6 +16,9 @@ const _init = (db) => {
         author: {
             type: String
         },
+        imageUri: {
+            type: String
+        },
         imageUrl: {
             type: String
         },
@@ -29,7 +32,7 @@ const _init = (db) => {
             {
                 userId: {
                     type: String,
-                    unique: true
+                    // unique: true
                 },
                 grade: {
                     type: Number
@@ -41,37 +44,39 @@ const _init = (db) => {
         }
     })
 
+    schema.index({
+        userId: 1,
+        ratings: [
+            {
+                userId: 1,
+                grade: 1 
+            }
+        ]}, { unique: true });
     schema.plugin(mongooseUniqueValidator)
     Model = db.model(`${import.meta.url.split('/').pop().split('.').shift()}`, schema)
 }
 
 const save = async (book) => {
-    let payload 
+    let payload = {
+        status: 500,
+        data: {
+            message: `internal`
+        }
+    }
     try {
         await book.save()
         payload = {
             data: {
-                message: `Vous êtes bien enregistré`,
+                message: `Le livre est bien enregistré`,
             },
             status: 201
         }
     } catch (error) {
-        switch (error.errors.title.properties.type) {
-            case "unique":
-                payload = {
-                    data: {
-                        message: `${error.errors.title.properties.message}`,
-                    },
-                    status: 422
-                }
-                break;
-            default:
-                payload = {
-                    data: {
-                        message: `Internal server error`,
-                    },
-                    status: 500
-                }
+        payload = {
+            data: {
+                message: `${error}`
+            },
+            status: 422
         }
     }
     

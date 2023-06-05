@@ -1,5 +1,4 @@
 import routes from "../routes.js"
-import Authenticate from "../middlewares/Auth.js"
 import express from 'express'
 const router = express.Router()
 
@@ -7,19 +6,19 @@ const initialize = async (webServer, port, prefix, middlewaresList) => {
     routes.forEach(route => {
         switch(route[0]) {
             case 'GET':
-                router.get(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                router.get(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response) => await route[3](request, response))
                 break;
             case 'POST':
-                router.post(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                router.post(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response) => await route[3](request, response))
                 break;
             case 'PATCH': 
-                router.patch(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                router.patch(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response) => await route[3](request, response))
                 break;
             case 'PUT': 
-                router.put(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                router.put(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response) => await route[3](request, response))
                 break;
             case 'DELETE': 
-                router.delete(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response, next) => await route[3](request, response, next))
+                router.delete(`/${prefix}${route[1]}`, invokeMiddlewares(middlewaresList, route[2]), async(request, response) => await route[3](request, response))
                 break;
         }
     })

@@ -1,10 +1,9 @@
 import Book from '../models/Book.js'
 import Validator from '../core/Validator.js'
 import App from '../app.js'
+import { storeFile, removeFile } from '../core/Helper.js'
 
 const get = async (request, response) => {
-   let book = null
-
    if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
       const currentBook = await Book.get().find({ _id: request.params.id })
          .then(data => data[0])
@@ -12,75 +11,98 @@ const get = async (request, response) => {
             console.log(error)
          })
 
-      if (currentBook !== null) {
+      if (currentBook !== undefined) {
          response.status(200)
-         book = currentBook
+         response.send(currentBook)
+      } else {
+         response.status(404)
+         response.send({
+            errors: [ `Le livre ${request.params.id} n'existe pas` ]
+         })
       }
    } else {
       response.status(422)
-      book = null
+      response.send({
+         errors: [
+            `L'ID du livre est requis`,
+            `L'ID du livre doit être égal à 24 caratères`
+         ]
+      })
    }
-
-   response.send(book)
 }
 
 const list = async (request, response) => {
    let books
 
    if (request.path.split(`/`).pop() === `bestrating`) {
-      books = await Book.get().find({}).sort({ averageRating: 1 }).limit(3).then(books => books)
+      books = await Book.get()
+         .find({})
+         .sort({ averageRating: 1 })
+         .limit(3)
+         .then(books => books)
    } else {
-      books = await Book.get().find({}).then(books => books)
+      books = await Book.get()
+         .find({})
+         .then(books => books)
    }
 
    response.status(200)
-   response.send(Array.from(books))
+   response.send(books)
 }
 
 const store = async (request, response) => {
-   // const { validated, failed } = Validator.parseBody(request.body, [
-   //    ['image', "file:image"],
-   //    ['author', "string|between:8,64"],
-   //    ['title', "string|between:8,64"],
-   //    ['genre', "string|between:8,64"],
-   // ])
+   /**
+    * On créé le nouveau livre et on le stocke en DB
+    */
 
-   // console.log(validated);
-   // console.log(failed);
+   let { validated, failed } = Validator.parseBody(request, [
+      ['image', "file:image"],
+      ['author', "string"],
+      ['title', "string"],
+      ['genre', "string"]
+   ])
 
-   let data = JSON.parse(request.body.book)
+   if (failed.length > 0) {
+      response.status(422)
+      response.send({
+         errors: failed
+      })
+   } else {
+      const bodyRequestBook = JSON.parse(request.body.book)
 
-   const book = new (Book.get())({ ...data, imageUrl: `${App.getEnv().API_URL}${request.file.path}`
-   })
+      const imageToUpload = request.file
+      const payload = {
+         ...bodyRequestBook,
+         ...{imageUrl: `/`},
+         ...{imageUri: `/`},
+         ...{averageRating: bodyRequestBook.ratings[0].grade}
+      }
 
-   console.log(book)
+      const book = new (Book.get())(payload)
+      const imageName = `${book.id}.${request.file.mimetype.split(`/`).pop()}`
 
-   try {
-      await Book.save(book)
-   } catch (err) {
-      console.log(err)
+      book.imageUrl = `${App.getEnv().API_URL}uploads/${imageName}`
+      book.imageUri = `/uploads/${imageName}`
+
+      delete payload.image
+
+      try {
+         const payload = await Book.save(book)
+         if (payload.status === 201) {
+            storeFile(imageToUpload, `uploads`, `${imageName}`)
+            response.status(payload.status)
+            response.send({book})
+         } else {
+            response.status(payload.status)
+            response.send(payload.data)
+         }
+
+      } catch (err) {
+         console.log(err)
+         response.status(500)
+         response.send({err})
+      }
    }
-
-   response.status(200)
-   response.send({
-      message: `ok`
-   })
-
-   // console.log(request.user)
-   // const payload = {
-   //    userId: request.user.userId,
-   //    title: request.body.title,
-   //    author: request.body.author,
-   //    genre: request.body.genre,
-   //    rating: [],
-   //    averageRating: 0
-   // }
-   // const newBook = new (Book.get())(payload)
-   
-   // const dbResponse = await Book.save(newBook)
-
-   // response.status(dbResponse.status)
-   // response.send(dbResponse.data)
 }
 
 const update = async (request, response) => {
@@ -91,11 +113,25 @@ const update = async (request, response) => {
    })
 }
 
-const destroy = (request, response) => {
-   response.send({
-      message: `message`,
-      status: 200
-   })
+const destroy = async (request, response) => {
+    if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
+        await Book.get().findOneAndRemove({ _id: request.params.id })
+            .then(result => {
+                console.log('Entrée supprimée avec succès :', result);
+                removeFile(result.imageUri)
+            })
+            .catch(err => {
+                console.error('Erreur lors de la suppression de l\'entrée :', err);
+            });
+    
+        response.status(200)
+        response.send({
+            message: `Le livre ${request.params.id} à bien été supprimé`
+        })
+    } else {
+        response.status(422)
+        response.send(`L'ID du livre est requis`)
+    }
 }
 
 const rating = async (request, response) => {
