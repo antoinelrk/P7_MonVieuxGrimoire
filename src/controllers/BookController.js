@@ -106,11 +106,38 @@ const store = async (request, response) => {
 }
 
 const update = async (request, response) => {
-   let currentBook = await Book.get().find({ _id: request.params.id }).then(data => data)
-   response.send({
-      message: currentBook,
-      status: 200
-   })
+   if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
+      const body = JSON.parse(request.body.book)
+      let payload = {...body}
+      let imageName = ``
+
+      if (request.file) {
+         imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
+         payload = {
+            ...body,
+            ...{ imageUrl: `${App.getEnv().API_URL}uploads/${imageName}` },
+            ...{ imageUri: `/uploads/${imageName}` }
+         }
+      }
+
+      await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
+         .then((updatedBook) => {
+            if (request.file) {
+               storeFile(request.file, `uploads`, `${imageName}`)
+            }
+
+            response.status(200)
+            response.send(`Le livre ${updatedBook.id} a bien été modifié`)
+         })
+         .catch((error) => {
+            console.log(error)
+            response.status(500)
+            response.send(`bonjour`)
+         })
+   } else {
+      response.status(422)
+      response.send(`L'ID du livre est requis`)
+   }
 }
 
 const destroy = async (request, response) => {

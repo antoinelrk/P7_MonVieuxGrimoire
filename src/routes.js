@@ -48,9 +48,9 @@ export default [
                 .then(module => module.default.store(request, response))
     ],
     [
-        'PATCH',
+        'PUT',
         "/books/:id",
-        ['auth'],
+        ['auth', 'filemanager'],
         async (request, response) =>
             await import (`./controllers/BookController.js`)
                 .then(module => module.default.update(request, response))
