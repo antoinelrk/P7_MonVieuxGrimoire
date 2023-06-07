@@ -3,15 +3,10 @@ import Hash from '../core/Hash.js'
 import Jwt from '../core/Jwt.js'
 
 const signup = async (request, response) => {
-    const payload = {
+    const dbResponse = await User.saveUser(new (User.get())({
         email: request.body.email,
         password: await Hash.make(request.body.password)
-    }
-
-    const user = new (User.get())(payload);
-
-    const dbResponse = await User.saveUser(user)
-
+    }))
     response.status(dbResponse.status)
     response.send(dbResponse.data)
 }

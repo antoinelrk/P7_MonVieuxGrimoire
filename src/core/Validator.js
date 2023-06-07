@@ -115,6 +115,7 @@ const isNumber = (value) => {
     }
     
 }
+
 const respectMimetype = (value, rule) => {
     let result = {
         passed: false,
@@ -124,12 +125,13 @@ const respectMimetype = (value, rule) => {
         case "image":
             const mime = value.split(`/`).pop()
             const imagesMimeType = ['jpg', 'jpeg', 'png', 'gif', 'webp']
-            // const imagesMimeType = ['mp4']
+            // const videosMimeType = ['mp4', 'webm', 'avi', 'mkv']
+            // const musicsMimeType = ['mp3', 'ogg', 'wav', 'flac']
             if (imagesMimeType.some((value) => value === mime)) {
                 result.passed = true
             } else {
                 result.passed = false,
-                result.message = `Le fichier doit être une ${rule} valide`
+                result.message = `Le fichier doit être un(e) ${rule} valide`
             }
             break
         default: result
@@ -137,6 +139,7 @@ const respectMimetype = (value, rule) => {
 
     return result
 }
+
 const minmax = (value, interval) => {
     const min = parseInt(interval.split(',')[0])
     const max = parseInt(interval.split(',')[1])
