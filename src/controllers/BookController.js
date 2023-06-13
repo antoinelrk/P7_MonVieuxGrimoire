@@ -120,6 +120,9 @@ const update = async (request, response) => {
          }
       }
 
+      /**
+       * TODO: Afin de vérifier si l'utilisateur est le proprio du livre, utiliser les données du JWT
+       */
       await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
          .then((updatedBook) => {
             if (request.file) {
@@ -142,19 +145,22 @@ const update = async (request, response) => {
 
 const destroy = async (request, response) => {
     if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
-        await Book.get().findOneAndRemove({ _id: request.params.id })
-            .then(result => {
-                console.log('Entrée supprimée avec succès :', result);
-                removeFile(result.imageUri)
-            })
-            .catch(err => {
-                console.error('Erreur lors de la suppression de l\'entrée :', err);
-            });
-    
-        response.status(200)
-        response.send({
-            message: `Le livre ${request.params.id} à bien été supprimé`
-        })
+      /**
+       * TODO: Afin de vérifier si l'utilisateur est le proprio du livre, utiliser les données du JWT
+       */
+      await Book.get().findOneAndRemove({ _id: request.params.id })
+         .then(result => {
+               console.log('Entrée supprimée avec succès :', result);
+               removeFile(result.imageUri)
+         })
+         .catch(err => {
+               console.error('Erreur lors de la suppression de l\'entrée :', err);
+         });
+   
+      response.status(200)
+      response.send({
+         message: `Le livre ${request.params.id} à bien été supprimé`
+      })
     } else {
         response.status(422)
         response.send(`L'ID du livre est requis`)
