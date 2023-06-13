@@ -11,7 +11,10 @@ export const fileStorage = multer({ storage: multer.memoryStorage(), dest: 'uplo
 
 export default async (request, response, next) => {
     fileStorage (request, response, async (error) => {
-        // console.log(request)
+        if (request.file === undefined) {
+            next()
+            return
+        }
         let errors = []
 
         if (MIME_TYPES.includes(request.file.mimetype)) {

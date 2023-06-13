@@ -52,6 +52,7 @@ const list = async (request, response) => {
 
 const store = async (request, response) => {
    let { validated, failed } = Validator.parseBody(request, [
+      ['image', "required"],
       ['author', "string"],
       ['title', "string"],
       ['genre', "string"]
@@ -102,36 +103,45 @@ const store = async (request, response) => {
 
 const update = async (request, response) => {
    if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
-      const body = JSON.parse(request.body.book)
-      let payload = {...body}
-      let imageName = ``
-
-      if (request.file) {
-         imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
-         payload = {
-            ...body,
-            ...{ imageUrl: `${App.getEnv().API_URL}uploads/${imageName}` },
-            ...{ imageUri: `/uploads/${imageName}` }
-         }
-      }
-
-      /**
-       * TODO: Afin de vérifier si l'utilisateur est le proprio du livre, utiliser les données du JWT
-       */
-      await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
-         .then((updatedBook) => {
-            if (request.file) {
-               storeFile(request.file, `uploads`, `${imageName}`)
-            }
-
-            response.status(200)
-            response.send(`Le livre ${updatedBook.id} a bien été modifié`)
-         })
+      const currentBook = await Book.get().find({ _id: request.params.id })
+         .then(data => data[0])
          .catch((error) => {
             console.log(error)
-            response.status(500)
-            response.send(`bonjour`)
          })
+
+      if (currentBook.userId === request.user.id) {
+         const body = JSON.parse(request.body.book)
+         let payload = {...body}
+         let imageName = ``
+   
+         if (request.file) {
+            imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
+            payload = {
+               ...body,
+               ...{ imageUrl: `${App.getEnv().API_URL}uploads/${imageName}` },
+               ...{ imageUri: `/uploads/${imageName}` }
+            }
+         }
+
+         await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
+            .then((updatedBook) => {
+               if (request.file) {
+                  storeFile(request.file, `uploads`, `${imageName}`)
+               }
+   
+               response.status(200)
+               response.send(`Le livre ${updatedBook.id} a bien été modifié`)
+            })
+            .catch((error) => {
+               response.status(500)
+               response.send(`${error}`)
+            })
+      } else {
+         response.status(403)
+         response.send({
+            message: `Vous n'avez pas l'autorisation de modifier ce livre`
+         })
+      }
    } else {
       response.status(422)
       response.send(`L'ID du livre est requis`)
@@ -140,10 +150,14 @@ const update = async (request, response) => {
 
 const destroy = async (request, response) => {
     if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
-      /**
-       * TODO: Afin de vérifier si l'utilisateur est le proprio du livre, utiliser les données du JWT
-       */
-      await Book.get().findOneAndRemove({ _id: request.params.id })
+      const currentBook = await Book.get().find({ _id: request.params.id })
+         .then(data => data[0])
+         .catch((error) => {
+            console.log(error)
+         })
+      
+      if (currentBook.userId === request.user.id) {
+         await Book.get().findOneAndRemove({ _id: request.params.id })
          .then(result => {
                console.log('Entrée supprimée avec succès :', result);
                removeFile(result.imageUri)
@@ -152,10 +166,16 @@ const destroy = async (request, response) => {
                console.error('Erreur lors de la suppression de l\'entrée :', err);
          });
    
-      response.status(200)
-      response.send({
-         message: `Le livre ${request.params.id} à bien été supprimé`
-      })
+         response.status(200)
+         response.send({
+            message: `Le livre ${request.params.id} à bien été supprimé`
+         })
+      } else {
+         response.status(403)
+         response.send({
+            message: `Vous n'avez pas l'autorisation de modifier ce livre`
+         })
+      }
     } else {
         response.status(422)
         response.send(`L'ID du livre est requis`)
