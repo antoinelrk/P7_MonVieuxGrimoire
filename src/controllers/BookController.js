@@ -51,12 +51,7 @@ const list = async (request, response) => {
 }
 
 const store = async (request, response) => {
-   /**
-    * On créé le nouveau livre et on le stocke en DB
-    */
-
    let { validated, failed } = Validator.parseBody(request, [
-      ['image', "file:image"],
       ['author', "string"],
       ['title', "string"],
       ['genre', "string"]
