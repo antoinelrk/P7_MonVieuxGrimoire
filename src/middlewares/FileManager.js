@@ -7,7 +7,13 @@ const MIME_TYPES = [
     "image/webp"
 ]
 
-export const fileStorage = multer({ storage: multer.memoryStorage(), dest: 'uploads/' }).single('image')
+export const fileStorage = multer({
+    storage: multer.memoryStorage(), 
+    dest: 'uploads/', 
+    limits: {
+        fileSize: 1000000
+    }
+}).single('image')
 
 export default async (request, response, next) => {
     fileStorage (request, response, async (error) => {
