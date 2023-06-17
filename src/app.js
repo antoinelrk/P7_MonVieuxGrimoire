@@ -13,7 +13,7 @@ const env = process.env
 const webServer = express()
 webServer.use(cors({
     origin: process.env.ALLOWED_CORS.split(','),
-    methods: 'GET,POST',
+    methods: 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
     allowedHeaders: 'Content-Type,Authorization',
     credentials: true,
     optionsSuccessStatus: 200

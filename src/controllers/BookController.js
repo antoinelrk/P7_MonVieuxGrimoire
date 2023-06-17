@@ -52,17 +52,25 @@ const list = async (request, response) => {
 
 const store = async (request, response) => {
    let { validated, failed } = Validator.parseBody(request, [
-      ['image', "required"],
       ['author', "string"],
       ['title', "string"],
       ['genre', "string"]
    ])
 
+   if (!request.file) {
+      response.status(422)
+      response.send({
+         message: `L'image de couverture est requise`
+      })
+      return
+   }
+
    if (failed.length > 0) {
       response.status(422)
       response.send({
-         errors: failed
+         message: failed
       })
+      return
    } else {
       const bodyRequestBook = JSON.parse(request.body.book)
 
@@ -94,7 +102,6 @@ const store = async (request, response) => {
          }
 
       } catch (err) {
-         console.log(err)
          response.status(500)
          response.send({err})
       }
@@ -109,8 +116,8 @@ const update = async (request, response) => {
             console.log(error)
          })
 
-      if (currentBook.userId === request.user.id) {
-         const body = JSON.parse(request.body.book)
+      if (currentBook.userId === request.user.userId) {
+         const body = request.file ? JSON.parse(request.body.book) : request.body
          let payload = {...body}
          let imageName = ``
    
@@ -118,19 +125,20 @@ const update = async (request, response) => {
             imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
             payload = {
                ...body,
-               ...{ imageUrl: `${App.getEnv().API_URL}uploads/${imageName}` },
-               ...{ imageUri: `/uploads/${imageName}` }
+               ...{
+                  imageUrl: `${App.getEnv().API_URL}uploads/${imageName}`,
+                  imageUri: `/uploads/${imageName}`
+               }
             }
          }
 
          await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
-            .then((updatedBook) => {
+            .then(async (updatedBook) => {
                if (request.file) {
-                  storeFile(request.file, `uploads`, `${imageName}`)
+                  await storeFile(request.file, `uploads`, `${imageName}`)
                }
-   
                response.status(200)
-               response.send(`Le livre ${updatedBook.id} a bien été modifié`)
+               response.send(`Livre modifié`)
             })
             .catch((error) => {
                response.status(500)
