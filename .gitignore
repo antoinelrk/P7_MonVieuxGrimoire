@@ -3,4 +3,4 @@ uploads/*
 
 package-lock.json
 .env
-docker-compose.yml
+*compose.yml
