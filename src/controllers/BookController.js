@@ -1,9 +1,14 @@
 import Book from '../models/Book.js'
-import Validator from '../core/Validator.js'
 import App from '../app.js'
 import { storeFile, removeFile } from '../core/Helper.js'
+import { validationResult } from 'express-validator'
 
 const get = async (request, response) => {
+
+   const errors = validationResult(request)
+   console.log(errors)
+   return
+
    if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
       const currentBook = await Book.get().find({ _id: request.params.id })
          .then(data => data[0])
@@ -51,143 +56,119 @@ const list = async (request, response) => {
 }
 
 const store = async (request, response) => {
-   let { validated, failed } = Validator.parseBody(request, [
-      ['author', "string"],
-      ['title', "string"],
-      ['genre', "string"]
-   ])
+   // if (!request.file) {
+   //    response.status(422)
+   //    response.send({
+   //       message: `L'image de couverture est requise`
+   //    })
+   //    return
+   // }
 
-   if (!request.file) {
-      response.status(422)
-      response.send({
-         message: `L'image de couverture est requise`
-      })
-      return
+   const bodyRequestBook = JSON.parse(request.body.book)
+
+   const imageToUpload = request.file
+   const payload = {
+      ...bodyRequestBook,
+      ...{imageUrl: `/`},
+      ...{imageUri: `/`},
+      ...{averageRating: bodyRequestBook.ratings[0].grade}
    }
 
-   if (failed.length > 0) {
-      response.status(422)
-      response.send({
-         message: failed
-      })
-      return
-   } else {
-      const bodyRequestBook = JSON.parse(request.body.book)
+   const book = new (Book.get())(payload)
+   const imageName = `${book.id}.${request.file.mimetype.split(`/`).pop()}`
 
-      const imageToUpload = request.file
-      const payload = {
-         ...bodyRequestBook,
-         ...{imageUrl: `/`},
-         ...{imageUri: `/`},
-         ...{averageRating: bodyRequestBook.ratings[0].grade}
+   book.imageUrl = `${App.getEnv().API_URL}uploads/${imageName}`
+   book.imageUri = `/uploads/${imageName}`
+
+   delete payload.image
+
+   try {
+      const payload = await Book.save(book)
+      if (payload.status === 201) {
+         storeFile(imageToUpload, `uploads`, `${imageName}`)
+         response.status(payload.status)
+         response.send({book})
+      } else {
+         response.status(payload.status)
+         response.send(payload.data)
       }
 
-      const book = new (Book.get())(payload)
-      const imageName = `${book.id}.${request.file.mimetype.split(`/`).pop()}`
-
-      book.imageUrl = `${App.getEnv().API_URL}uploads/${imageName}`
-      book.imageUri = `/uploads/${imageName}`
-
-      delete payload.image
-
-      try {
-         const payload = await Book.save(book)
-         if (payload.status === 201) {
-            storeFile(imageToUpload, `uploads`, `${imageName}`)
-            response.status(payload.status)
-            response.send({book})
-         } else {
-            response.status(payload.status)
-            response.send(payload.data)
-         }
-
-      } catch (err) {
-         response.status(500)
-         response.send({err})
-      }
+   } catch (err) {
+      response.status(500)
+      response.send({err})
    }
 }
 
 const update = async (request, response) => {
-   if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
-      const currentBook = await Book.get().find({ _id: request.params.id })
-         .then(data => data[0])
-         .catch((error) => {
-            console.log(error)
-         })
+   const currentBook = await Book.get().find({ _id: request.params.id })
+      .then(data => data[0])
+      .catch((error) => {
+         console.log(error)
+      })
 
-      if (currentBook.userId === request.user.userId) {
-         const body = request.file ? JSON.parse(request.body.book) : request.body
-         let payload = {...body}
-         let imageName = ``
-   
-         if (request.file) {
-            imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
-            payload = {
-               ...body,
-               ...{
-                  imageUrl: `${App.getEnv().API_URL}uploads/${imageName}`,
-                  imageUri: `/uploads/${imageName}`
-               }
+   if (currentBook.userId === request.user.userId) {
+      const body = request.file ? JSON.parse(request.body.book) : request.body
+      let payload = {...body}
+      let imageName = ``
+
+      if (request.file) {
+         imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
+         payload = {
+            ...body,
+            ...{
+               imageUrl: `${App.getEnv().API_URL}uploads/${imageName}`,
+               imageUri: `/uploads/${imageName}`
             }
          }
-
-         await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
-            .then(async (updatedBook) => {
-               if (request.file) {
-                  await storeFile(request.file, `uploads`, `${imageName}`)
-               }
-               response.status(200)
-               response.send(`Livre modifié`)
-            })
-            .catch((error) => {
-               response.status(500)
-               response.send(`${error}`)
-            })
-      } else {
-         response.status(403)
-         response.send({
-            message: `Vous n'avez pas l'autorisation de modifier ce livre`
-         })
       }
+
+      await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
+         .then(async (updatedBook) => {
+            if (request.file) {
+               await storeFile(request.file, `uploads`, `${imageName}`)
+            }
+            response.status(200)
+            response.send(`Livre modifié`)
+         })
+         .catch((error) => {
+            response.status(500)
+            response.send(`${error}`)
+         })
    } else {
-      response.status(422)
-      response.send(`L'ID du livre est requis`)
+      response.status(403)
+      response.send({
+         message: `Vous n'avez pas l'autorisation de modifier ce livre`
+      })
    }
 }
 
 const destroy = async (request, response) => {
-    if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
-      const currentBook = await Book.get().find({ _id: request.params.id })
-         .then(data => data[0])
-         .catch((error) => {
-            console.log(error)
-         })
-      
-      if (currentBook.userId === request.user.id) {
-         await Book.get().findOneAndRemove({ _id: request.params.id })
-         .then(result => {
-               console.log('Entrée supprimée avec succès :', result);
-               removeFile(result.imageUri)
-         })
-         .catch(err => {
-               console.error('Erreur lors de la suppression de l\'entrée :', err);
-         });
+   const currentBook = await Book.get().find({ _id: request.params.id })
+      .then(data => data[0])
+      .catch((error) => {
+         console.log(error)
+      })
    
-         response.status(200)
-         response.send({
-            message: `Le livre ${request.params.id} à bien été supprimé`
-         })
-      } else {
-         response.status(403)
-         response.send({
-            message: `Vous n'avez pas l'autorisation de modifier ce livre`
-         })
-      }
-    } else {
-        response.status(422)
-        response.send(`L'ID du livre est requis`)
-    }
+   if (currentBook.userId === request.user.id) {
+      await Book.get().findOneAndRemove({ _id: request.params.id })
+      .then(result => {
+            console.log('Entrée supprimée avec succès :', result);
+            removeFile(result.imageUri)
+      })
+      .catch(err => {
+            console.error('Erreur lors de la suppression de l\'entrée :', err);
+      });
+
+      response.status(200)
+      response.send({
+         message: `Le livre ${request.params.id} à bien été supprimé`
+      })
+   } else {
+      response.status(403)
+      response.send({
+         message: `Vous n'avez pas l'autorisation de modifier ce livre`
+      })
+   }
 }
 
 const rating = async (request, response) => {
