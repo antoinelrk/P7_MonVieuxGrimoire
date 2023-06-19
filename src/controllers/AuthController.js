@@ -5,27 +5,24 @@ import { validationResult } from 'express-validator'
 
 const signup = async (request, response) => {
     const errors = validationResult(request)
-    console.log(errors)
-    return 
-    const dbResponse = await User.saveUser(new (User.get())({
-        email: request.body.email,
-        password: await Hash.make(request.body.password)
-    }))
-    response.status(dbResponse.status)
-    response.send(dbResponse.data)
+    if (errors.isEmpty()) {
+        const dbResponse = await User.saveUser(new (User.get())({
+            email: request.body.email,
+            password: await Hash.make(request.body.password)
+        }))
+        response.status(dbResponse.status)
+        response.send(dbResponse.data)
+    } else {
+        response.status(422)
+        response.send(errors)
+    }
 }
 
 const login = async (request, response) => {
+    const errors = validationResult(request)
     let statusCode
     let data
-    const errors = validationResult(request)
-    if (errors) {
-        statusCode = 422
-        data = {
-            message: errors
-        }
-        return
-    } else {
+    if (errors.isEmpty()) {
         const user = await User.get().findOne({ email: request.body.email })
 
         if (await Hash.verify(user.password, request.body.password)) {
@@ -49,9 +46,14 @@ const login = async (request, response) => {
                 message: `Mot de passe incorrect`
             }
         }
-        response.status(statusCode)
-        response.send(data)
+    } else {
+        statusCode = 422
+        data = errors
+        return
     }
+
+    response.status(statusCode)
+    response.send(data)
 }
 
 export default {

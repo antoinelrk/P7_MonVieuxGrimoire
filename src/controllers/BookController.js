@@ -4,35 +4,19 @@ import { storeFile, removeFile } from '../core/Helper.js'
 import { validationResult } from 'express-validator'
 
 const get = async (request, response) => {
-
    const errors = validationResult(request)
-   console.log(errors)
-   return
-
-   if (request.params.hasOwnProperty('id') && request.params.id.length === 24) {
+   if (errors.isEmpty()) {
       const currentBook = await Book.get().find({ _id: request.params.id })
          .then(data => data[0])
          .catch((error) => {
             console.log(error)
          })
-
-      if (currentBook !== undefined) {
+   
          response.status(200)
          response.send(currentBook)
-      } else {
-         response.status(404)
-         response.send({
-            errors: [ `Le livre ${request.params.id} n'existe pas` ]
-         })
-      }
    } else {
       response.status(422)
-      response.send({
-         errors: [
-            `L'ID du livre est requis`,
-            `L'ID du livre doit être égal à 24 caratères`
-         ]
-      })
+      response.send(errors)
    }
 }
 
@@ -56,14 +40,6 @@ const list = async (request, response) => {
 }
 
 const store = async (request, response) => {
-   // if (!request.file) {
-   //    response.status(422)
-   //    response.send({
-   //       message: `L'image de couverture est requise`
-   //    })
-   //    return
-   // }
-
    const bodyRequestBook = JSON.parse(request.body.book)
 
    const imageToUpload = request.file
@@ -100,45 +76,52 @@ const store = async (request, response) => {
 }
 
 const update = async (request, response) => {
-   const currentBook = await Book.get().find({ _id: request.params.id })
+   const errors = validationResult(request)
+
+   if (errors.isEmpty()) {
+      const currentBook = await Book.get().find({ _id: request.params.id })
       .then(data => data[0])
       .catch((error) => {
          console.log(error)
       })
 
-   if (currentBook.userId === request.user.userId) {
-      const body = request.file ? JSON.parse(request.body.book) : request.body
-      let payload = {...body}
-      let imageName = ``
-
-      if (request.file) {
-         imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
-         payload = {
-            ...body,
-            ...{
-               imageUrl: `${App.getEnv().API_URL}uploads/${imageName}`,
-               imageUri: `/uploads/${imageName}`
+      if (currentBook.userId === request.user.userId) {
+         const body = request.file ? JSON.parse(request.body.book) : request.body
+         let payload = {...body}
+         let imageName = ``
+   
+         if (request.file) {
+            imageName = `${request.params.id}.${request.file.mimetype.split(`/`).pop()}`
+            payload = {
+               ...payload,
+               ...{
+                  imageUrl: `${App.getEnv().API_URL}uploads/${imageName}`,
+                  imageUri: `/uploads/${imageName}`
+               }
             }
          }
+   
+         await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
+            .then(async () => {
+               if (request.file) {
+                  await storeFile(request.file, `uploads`, `${imageName}`)
+               }
+               response.status(200)
+               response.send({message: `Livre modifié`})
+            })
+            .catch((error) => {
+               response.status(500)
+               response.send(`${error}`)
+            })
+      } else {
+         response.status(403)
+         response.send({
+            message: `Vous n'avez pas l'autorisation de modifier ce livre`
+         })
       }
-
-      await Book.get().findOneAndUpdate({ _id: request.params.id }, payload, { new: true })
-         .then(async (updatedBook) => {
-            if (request.file) {
-               await storeFile(request.file, `uploads`, `${imageName}`)
-            }
-            response.status(200)
-            response.send(`Livre modifié`)
-         })
-         .catch((error) => {
-            response.status(500)
-            response.send(`${error}`)
-         })
    } else {
-      response.status(403)
-      response.send({
-         message: `Vous n'avez pas l'autorisation de modifier ce livre`
-      })
+      response.status(422)
+      response.send(errors)
    }
 }
 
@@ -149,7 +132,7 @@ const destroy = async (request, response) => {
          console.log(error)
       })
    
-   if (currentBook.userId === request.user.id) {
+   if (currentBook.userId === request.user.userId) {
       await Book.get().findOneAndRemove({ _id: request.params.id })
       .then(result => {
             console.log('Entrée supprimée avec succès :', result);
@@ -172,46 +155,53 @@ const destroy = async (request, response) => {
 }
 
 const rating = async (request, response) => {
-   let currentBook = await Book.get().find({ _id: request.params.id }).then(data => data[0])
-   let userRating = request.body.rating
+   const errors = validationResult(request)
 
-   if (currentBook.ratings.some(rating => rating.userId === request.body.userId)) {
+   if (errors.isEmpty()) {
+      let currentBook = await Book.get().find({ _id: request.params.id }).then(data => data[0])
+      let userRating = request.body.rating
+
+      if (currentBook.ratings.some(rating => rating.userId === request.body.userId)) {
+         response.status(422)
+         response.send({
+            message: `Vous avez déjà noté ce livre!`
+         })
+         return
+      }
+
+      if (userRating > 5) {
+         response.status(422)
+         response.send({
+            message: `La note ne peut être au dessus de 5`
+         })
+         return
+      }
+
+      let allRatingNumbers = userRating
+      await currentBook.ratings.map(rating => allRatingNumbers += rating.grade)
+      let newAverageNote = allRatingNumbers / (currentBook.ratings.length + 1)
+   
+      Book.get().findOneAndUpdate({ _id: request.params.id }, {
+         ratings: [
+            ...currentBook.ratings,
+            {
+               userId: request.body.userId,
+               grade: userRating
+            }
+         ],
+         averageRating: newAverageNote
+      }, {new: true}).then(result => {
+         response.status(200)
+         response.send(result)
+       })
+       .catch(error => {
+         response.status(500)
+         response.send(error)
+       });
+   } else {
       response.status(422)
-      response.send({
-         message: `Vous avez déjà noté ce livre!`
-      })
-      return
+      response.send(errors)
    }
-
-   if (userRating > 5) {
-      response.status(422)
-      response.send({
-         message: `La note ne peut être au dessus de 5`
-      })
-      return
-   }
-
-   let allRatingNumbers = userRating
-   await currentBook.ratings.map(rating => allRatingNumbers += rating.grade)
-   let newAverageNote = allRatingNumbers / (currentBook.ratings.length + 1)
-
-   Book.get().findOneAndUpdate({ _id: request.params.id }, {
-      ratings: [
-         ...currentBook.ratings,
-         {
-            userId: request.body.userId,
-            grade: userRating
-         }
-      ],
-      averageRating: newAverageNote
-   }, {new: true}).then(result => {
-      response.status(200)
-      response.send(result)
-    })
-    .catch(error => {
-      response.status(500)
-      response.send(error)
-    });
 }
 
 export default {

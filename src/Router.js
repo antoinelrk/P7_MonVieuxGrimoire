@@ -9,12 +9,13 @@ import AuthController from './controllers/AuthController.js'
 import BookController from './controllers/BookController.js'
 
 import User from './models/User.js'
+import Book from './models/Book.js'
 
 const router = express.Router()
 
 export default function (webServer, port) {
     router.post('/auth/login', [
-        body('email').notEmpty().isEmail().custom(async value => {
+        body('email').notEmpty().isEmail().custom(async (value) => {
             const user = await User.get().findOne({ email: value })
             if (user === null) throw new Error(`L'email n'existe pas`)
         }),
@@ -23,9 +24,9 @@ export default function (webServer, port) {
     async (request, response) => await AuthController.login(request, response))
 
     router.post('/auth/signup', [
-        body('email').notEmpty().isEmail().custom(async value => {
+        body('email').notEmpty().isEmail().custom(async (value) => {
             const user = await User.get().findOne({ email: value })
-            if (user) throw new Error('E-mail already in use')
+            if (user) throw new Error(`Cet E-mail n'est pas disponible`)
         }),
         body('password').notEmpty().isStrongPassword()
     ], [ async (request, response, next) => Guest(request, response, next) ],
@@ -34,32 +35,58 @@ export default function (webServer, port) {
     router.get('/books', async (request, response) => await BookController.list(request, response))
     router.get('/books/bestrating', async (request, response) => await BookController.list(request, response))
     router.get('/books/:id', [
-        param('id').notEmpty().isNumeric().custom() //.isString()
+        param('id').notEmpty().isString().custom(async (value) => {
+            const book = await Book.get().findOne({ _id: value })
+            if (!book) throw new Error(`Le livre ${value} n'existe pas`)
+        })
     ], async (request, response) => await BookController.get(request, response))
 
     router.post('/books', [
-        body('title').notEmpty().isString()
-        // TODO: Finir la validation
+        body('title').notEmpty().isString(),
+        body('author').notEmpty().isString(),
+        body('genre').notEmpty().isString(),
+        body('year').notEmpty().isNumeric(),
+        body('userId').notEmpty().isString().custom(async (value) => {
+            const user = await User.get().findOne({ _id: value })
+            if (!user) throw new Error(`L'utilisateur n'existe pas`)
+        }),
+        body('rating.userID').notEmpty().isString().custom(async (value) => {
+            const user = await User.get().findOne({ _id: value })
+            if (!user) throw new Error(`L'utilisateur n'existe pas`)
+        }),
+        body('rating.grade').notEmpty().isNumeric()
     ], [
         async (request, response, next) => Auth(request, response, next),
         async (request, response, next) => FileManager(request, response, next)
     ], async (request, response) => await BookController.store(request, response))
 
     router.put('/books/:id', [
-        // TODO: Finir la validation
+        param('id').notEmpty().isString().custom(async (value) => {
+            const book = await Book.get().findOne({ _id: value })
+            if (!book) throw new Error(`Le livre ${value} n'existe pas`)
+        }),
+        body('title').isString().optional(),
+        body('author').isString().optional(),
+        body('genre').isString().optional(),
+        body('year').isNumeric().optional()
     ], [
         async (request, response, next) => Auth(request, response, next),
         async (request, response, next) => FileManager(request, response, next)
     ], async (request, response) => await BookController.update(request, response))
 
     router.delete('/books/:id', [
-        // TODO: Finir la validation
+        param('id').notEmpty().custom(async (value) => {
+            const book = await Book.get().findOne({ _id: value })
+            if (!book) throw new Error(`Le livre ${value} n'existe pas`)
+        })
     ], [ async (request, response, next) => Auth(request, response, next) ],
     async (request, response) => await BookController.destroy(request, response))
 
-    router.post('books/:id/rating', [
-        param('id').isNumeric().notEmpty(),
-        
+    router.post('/books/:id/rating', [
+        param('id').notEmpty().custom(async (value) => {
+            const book = await Book.get().findOne({ _id: value })
+            if (!book) throw new Error(`Le livre ${value} n'existe pas`)
+        }),
     ], [ async (request, response, next) => Auth(request, response, next) ],
     async (request, response) => await BookController.rating(request, response))
 
