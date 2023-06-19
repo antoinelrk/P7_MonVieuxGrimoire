@@ -38,7 +38,7 @@ const saveUser = async (user) => {
                 break;
             default:
                 payload = {
-                    data: { message: `Internal server error` },
+                    data: { message: `Internal server error oui oui` },
                     status: 500
                 }
         }
