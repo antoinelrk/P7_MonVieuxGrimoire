@@ -10,10 +10,14 @@ import BookController from './controllers/BookController.js'
 
 import User from './models/User.js'
 import Book from './models/Book.js'
+import AccountController from './controllers/AccountController.js'
 
 const router = express.Router()
 
 export default function (webServer, port) {
+    /**
+     * Login
+     */
     router.post('/auth/login', [
         body('email').notEmpty().isEmail().custom(async (value) => {
             const user = await User.get().findOne({ email: value })
@@ -23,6 +27,9 @@ export default function (webServer, port) {
     ], [ async (request, response, next) => Guest(request, response, next) ],
     async (request, response) => await AuthController.login(request, response))
 
+    /**
+     * Register
+     */
     router.post('/auth/signup', [
         body('email').notEmpty().isEmail().custom(async (value) => {
             const user = await User.get().findOne({ email: value })
@@ -32,6 +39,21 @@ export default function (webServer, port) {
     ], [ async (request, response, next) => Guest(request, response, next) ],
     async (request, response) => await AuthController.signup(request, response))
 
+    /**
+     * Account management
+     */
+    router.delete('/users/:id',
+    [
+        param('id').notEmpty().isString().custom(async (value) => {
+            const user = await User.get().findOne({ id: value })
+            if (!user) throw new Error(`L'utilisateur n'existe pas`)
+        })
+    ],
+    [ async (request, response, next) => Auth(request, response, next) ],
+    async (request, response) => await AccountController.remove(request, response))
+    /**
+     * Book management
+     */
     router.get('/books', async (request, response) => await BookController.list(request, response))
     router.get('/books/bestrating', async (request, response) => await BookController.list(request, response))
     router.get('/books/:id', [
@@ -40,7 +62,6 @@ export default function (webServer, port) {
             if (!book) throw new Error(`Le livre ${value} n'existe pas`)
         })
     ], async (request, response) => await BookController.get(request, response))
-
     router.post('/books', [
         body('title').notEmpty().isString(),
         body('author').notEmpty().isString(),
@@ -59,7 +80,6 @@ export default function (webServer, port) {
         async (request, response, next) => Auth(request, response, next),
         async (request, response, next) => FileManager(request, response, next)
     ], async (request, response) => await BookController.store(request, response))
-
     router.put('/books/:id', [
         param('id').notEmpty().isString().custom(async (value) => {
             const book = await Book.get().findOne({ _id: value })
@@ -73,7 +93,6 @@ export default function (webServer, port) {
         async (request, response, next) => Auth(request, response, next),
         async (request, response, next) => FileManager(request, response, next)
     ], async (request, response) => await BookController.update(request, response))
-
     router.delete('/books/:id', [
         param('id').notEmpty().custom(async (value) => {
             const book = await Book.get().findOne({ _id: value })
@@ -81,7 +100,6 @@ export default function (webServer, port) {
         })
     ], [ async (request, response, next) => Auth(request, response, next) ],
     async (request, response) => await BookController.destroy(request, response))
-
     router.post('/books/:id/rating', [
         param('id').notEmpty().custom(async (value) => {
             const book = await Book.get().findOne({ _id: value })
