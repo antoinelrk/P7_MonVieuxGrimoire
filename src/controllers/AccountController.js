@@ -1,4 +1,4 @@
-import User from "../models/User"
+import User from "../models/User.js"
 
 const remove = async (request, response) => {
     const currentUser = await User.get().find({ _id: request.params.id })

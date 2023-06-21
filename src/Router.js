@@ -45,7 +45,7 @@ export default function (webServer, port) {
     router.delete('/users/:id',
     [
         param('id').notEmpty().isString().custom(async (value) => {
-            const user = await User.get().findOne({ id: value })
+            const user = await User.get().findOne({ _id: value })
             if (!user) throw new Error(`L'utilisateur n'existe pas`)
         })
     ],
