@@ -2,18 +2,21 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import Database from './core/Database.js'
-import Router from './core/Router.js'
+import Router from './Router.js'
 import Model from './core/Model.js'
-import Middleware from './core/Middleware.js'
+import Security from './middlewares/Security.js'
 
 dotenv.config()
 const env = process.env
 
 const webServer = express()
-webServer.use(cors())
-webServer.use(express.json())
-
-webServer.use('/uploads', express.static(`${process.cwd()}/uploads`));
+webServer.use(cors({
+    origin: process.env.ALLOWED_CORS.split(','),
+    methods: 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
+    allowedHeaders: 'Content-Type,Authorization',
+    credentials: true,
+    optionsSuccessStatus: 200
+}))
 
 const db = Database.connect({
     username: env.DB_USERNAME,
@@ -22,21 +25,20 @@ const db = Database.connect({
     dbName: env.DB_NAME
 })
 
-const arrayOfMiddlewares = await Middleware.initialize().then((elements) => {
-    Router.initialize(webServer, env.APP_PORT, env.API_PREFIX, elements)
-})
 Model.initialize(db)
 
+webServer.use(express.json())
+webServer.use('/uploads', express.static(`${process.cwd()}/uploads`));
+webServer.use(Security)
+
+Router(webServer, process.env.APP_PORT)
+
 const getDb = () => mongoose
-const getRouter = () => Router
 const getWebserver = () => webServer
 const getEnv = () => env
-const getMiddleware = () => arrayOfMiddlewares
 
 export default {
     getDb,
-    getRouter,
     getWebserver,
     getEnv,
-    getMiddleware
 }

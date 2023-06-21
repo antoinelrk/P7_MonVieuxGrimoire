@@ -4,11 +4,20 @@ import sharp from 'sharp'
 
 export async function storeFile(file, path, filename) {
     const fullpath = `${process.cwd()}/${path}`
-    if (!fs.existsSync(fullpath)) fs.mkdirSync(fullpath)
+    if (!fs.existsSync(fullpath)) {
+        fs.mkdirSync(fullpath)
+    } else {
+        const bookId = filename.split('.')[0]
+        fs.readdirSync(`${fullpath}`).map((file) => {
+            if (file.startsWith(bookId)) fs.unlinkSync(`${fullpath}/${file}`)
+        })
+    }
+
     await sharp(file.buffer).webp({
         quality: 20
     })
     .toFile(`${fullpath}/${filename}`)
+
     // fs.writeFileSync(`${fullpath}/${filename}`, file.buffer)
 }
 
